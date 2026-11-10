@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>LED контроллер</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#6c5ce7">
+<link rel="icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f3f3f7;--card:#fff;--tx:#17171c;--mut:#6b6b78;--ac:#6c5ce7;--bd:#e0e0ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d0d12;--card:#18181f;--tx:#f0f0f5;--mut:#9a9aa8;--bd:#2a2a35}}
+:root[data-theme="dark"]{--bg:#0d0d12;--card:#18181f;--tx:#f0f0f5;--mut:#9a9aa8;--bd:#2a2a35}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:14px;max-width:520px;margin:auto}
+h1{font-size:20px;margin:6px 0 12px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
+.c h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin:0 0 10px}
+button{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;cursor:pointer}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1}
+input[type=range]{width:100%;accent-color:var(--ac)}
+input[type=color]{width:100%;height:56px;border:none;background:none;padding:0}
+.sw{display:flex;gap:8px;flex-wrap:wrap}
+.sw i{width:38px;height:38px;border-radius:50%;border:2px solid var(--bd);cursor:pointer;display:block}
+.fx{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.fx button{padding:9px 0;font-size:14px}
+#st{font-size:14px;color:var(--mut)}
+#log{font:12px ui-monospace,monospace;color:var(--mut);max-height:90px;overflow:auto;white-space:pre-wrap}
+label{font-size:14px;color:var(--mut)}
+</style></head><body>
+<h1>💡 LED контроллер</h1>
+<div class="c"><div class="row"><button class="p" id="conn">Подключиться</button><button id="pw">Вкл/Выкл</button></div>
+<div id="st" style="margin-top:8px">Не подключено</div></div>
+
+<div class="c"><h2>Цвет</h2>
+<input type="color" id="col" value="#ff0066">
+<div class="sw" id="pre" style="margin-top:10px"></div>
+<div class="row" style="margin-top:10px"><button id="fav">★ Сохранить цвет</button></div>
+<div class="sw" id="favs" style="margin-top:10px"></div></div>
+
+<div class="c"><h2>Яркость</h2><input type="range" id="br" min="0" max="100" value="100"></div>
+
+<div class="c"><h2>Эффекты</h2><div class="fx" id="fx"></div>
+<label style="display:block;margin-top:10px">Скорость</label><input type="range" id="sp" min="0" max="100" value="50"></div>
+
+<div class="c"><h2>Музыка (микрофон)</h2>
+<div class="row"><button id="mus">Включить режим музыки</button></div>
+<label style="display:block;margin-top:8px">Чувствительность</label><input type="range" id="sens" min="1" max="10" value="5"></div>
+
+<div class="c"><h2>Таймер выключения</h2>
+<div class="row"><button data-t="15">15 мин</button><button data-t="30">30 мин</button><button data-t="60">60 мин</button><button data-t="0">Отмена</button></div>
+<div id="tm" style="font-size:14px;color:var(--mut);margin-top:8px"></div></div>
+
+<div class="c"><h2>Лог</h2><div id="log"></div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let ch=null,dev=null,q=Promise.resolve(),on=true,tmr=null,musOn=false,lastCol=[255,0,102];
+const log=m=>{const l=$('log');l.textContent=m+'\n'+l.textContent.slice(0,600)};
+const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+function send(b){
+  if(!ch){log('Нет подключения');return}
+  const d=new Uint8Array(b);
+  q=q.then(()=>(ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(d):ch.writeValue(d))).catch(e=>log('Ошибка: '+e.message));
+}
+const color=(r,g,b)=>{lastCol=[r,g,b];send([0x7e,7,5,3,r,g,b,0x10,0xef])};
+const bright=p=>send([0x7e,4,1,p,1,0xff,0xff,0,0xef]);
+const power=v=>{on=v;send(v?[0x7e,4,4,0xf0,0,1,0xff,0,0xef]:[0x7e,4,4,0,0,0,0xff,0,0xef])};
+const effect=id=>send([0x7e,5,3,id,3,0xff,0,0xef]);
+const speed=p=>send([0x7e,4,2,p,0xff,0xff,0,0xef]);
+
+async function connect(){
+  if(!navigator.bluetooth){$('st').textContent='Web Bluetooth не поддерживается. Откройте в Chrome на Android или ПК.';return}
+  try{
+    dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[0xfff0,0xffe5,0xffe0]});
+    dev.addEventListener('gattserverdisconnected',()=>{ch=null;$('st').textContent='Отключено'});
+    const s=await dev.gatt.connect();
+    try{const sv=await s.getPrimaryService(0xfff0);ch=await sv.getCharacteristic(0xfff3)}
+    catch(e){const sv=await s.getPrimaryService(0xffe5);ch=await sv.getCharacteristic(0xffe9)}
+    $('st').textContent='Подключено: '+(dev.name||'устройство');log('OK');
+  }catch(e){$('st').textContent='Не удалось подключиться';log(e.message)}
+}
+$('conn').onclick=connect;
+$('pw').onclick=()=>power(!on);
+$('col').oninput=e=>{const c=hex(e.target.value);throttle(()=>color(...c))};
+let lt=0;function throttle(f){const n=Date.now();if(n-lt>70){lt=n;f()}}
+$('br').oninput=e=>throttle(()=>bright(+e.target.value));
+$('sp').oninput=e=>throttle(()=>speed(+e.target.value));
+
+const presets=['#ff0000','#ff7a00','#ffd000','#00ff40','#00e5ff','#0040ff','#9b30ff','#ff00aa','#ffffff','#ffb46b'];
+function swatch(box,c){const i=document.createElement('i');i.style.background=c;i.onclick=()=>{$('col').value=c;color(...hex(c))};box.appendChild(i)}
+presets.forEach(c=>swatch($('pre'),c));
+function favs(){let a=[];try{a=JSON.parse(localStorage.getItem('f')||'[]')}catch(e){}return a}
+function drawFavs(){$('favs').innerHTML='';favs().forEach(c=>swatch($('favs'),c))}
+$('fav').onclick=()=>{const a=favs();a.push($('col').value);try{localStorage.setItem('f',JSON.stringify(a.slice(-12)))}catch(e){}drawFavs()};
+drawFavs();
+
+for(let i=0;i<29;i++){const b=document.createElement('button');b.textContent=i+1;b.onclick=()=>effect(0x80+i);$('fx').appendChild(b)}
+
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{
+  clearTimeout(tmr);const m=+b.dataset.t;
+  if(!m){$('tm').textContent='';return}
+  tmr=setTimeout(()=>{power(false);$('tm').textContent='Выключено по таймеру'},m*60000);
+  $('tm').textContent='Выключится через '+m+' мин (страница должна оставаться открытой)';
+});
+
+$('mus').onclick=async()=>{
+  if(musOn){musOn=false;$('mus').textContent='Включить режим музыки';return}
+  try{
+    const st=await navigator.mediaDevices.getUserMedia({audio:true});
+    const ac=new AudioContext(),an=ac.createAnalyser();an.fftSize=256;
+    ac.createMediaStreamSource(st).connect(an);const buf=new Uint8Array(an.frequencyBinCount);
+    musOn=true;$('mus').textContent='Выключить режим музыки';let h=0,prev=0;
+    const loop=()=>{
+      if(!musOn){st.getTracks().forEach(t=>t.stop());ac.close();return}
+      an.getByteFrequencyData(buf);
+      let bass=0;for(let i=0;i<6;i++)bass+=buf[i];bass/=6*255;
+      const k=+$('sens').value/5;const lv=Math.min(1,bass*k*1.4);
+      if(lv-prev>0.15)h=(h+47)%360;prev=lv;
+      const [r,g,b]=hsv(h,1,Math.max(0.05,lv));
+      throttle(()=>color(r,g,b));
+      requestAnimationFrame(loop);
+    };loop();
+  }catch(e){log('Микрофон: '+e.message)}
+};
+function hsv(h,s,v){const f=n=>{const k=(n+h/60)%6;return v-v*s*Math.max(0,Math.min(k,4-k,1))};return[f(5),f(3),f(1)].map(x=>Math.round(x*255))}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
