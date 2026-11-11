@@ -1,128 +1,139 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>LED контроллер</title>
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#6c5ce7">
-<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#6c5ce7"><link rel="icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f3f3f7;--card:#fff;--tx:#17171c;--mut:#6b6b78;--ac:#6c5ce7;--bd:#e0e0ea}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d0d12;--card:#18181f;--tx:#f0f0f5;--mut:#9a9aa8;--bd:#2a2a35}}
 :root[data-theme="dark"]{--bg:#0d0d12;--card:#18181f;--tx:#f0f0f5;--mut:#9a9aa8;--bd:#2a2a35}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:14px;max-width:520px;margin:auto}
+body{margin:0 auto;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;padding:14px;max-width:560px}
 h1{font-size:20px;margin:6px 0 12px}
 .c{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
 .c h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin:0 0 10px}
-button{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;cursor:pointer}
-button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.row>*{flex:1}
+button,select,input[type=time],input[type=number]{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:9px 10px}
+button{cursor:pointer}button.p,button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}.row>*{flex:1;min-width:0}
 input[type=range]{width:100%;accent-color:var(--ac)}
-input[type=color]{width:100%;height:56px;border:none;background:none;padding:0}
-.sw{display:flex;gap:8px;flex-wrap:wrap}
-.sw i{width:38px;height:38px;border-radius:50%;border:2px solid var(--bd);cursor:pointer;display:block}
-.fx{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.fx button{padding:9px 0;font-size:14px}
-#st{font-size:14px;color:var(--mut)}
-#log{font:12px ui-monospace,monospace;color:var(--mut);max-height:90px;overflow:auto;white-space:pre-wrap}
-label{font-size:14px;color:var(--mut)}
+input[type=color]{width:100%;height:52px;border:none;background:none;padding:0}
+.pc input[type=color]{height:44px;flex:0 0 52px}
+.sw{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.sw i{width:36px;height:36px;border-radius:50%;border:2px solid var(--bd);cursor:pointer}
+.g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.g button{padding:10px 2px;font-size:14px}
+.fx{grid-template-columns:repeat(6,1fr)}.fx button{padding:8px 0}
+label{font-size:13px;color:var(--mut);display:block}
+.rule{border:1px solid var(--bd);border-radius:12px;padding:10px;margin-top:8px}
+.days{display:flex;gap:4px;margin-top:8px}.days button{flex:1;padding:6px 0;font-size:12px}
+#st,#note{font-size:13px;color:var(--mut)}#log{font:12px ui-monospace,monospace;color:var(--mut);max-height:80px;overflow:auto;white-space:pre-wrap}
 </style></head><body>
 <h1>💡 LED контроллер</h1>
-<div class="c"><div class="row"><button class="p" id="conn">Подключиться</button><button id="pw">Вкл/Выкл</button></div>
+<div class="c"><div class="row" style="margin:0"><button class="p" id="conn">Подключиться</button><button id="pw">Вкл/Выкл</button></div>
 <div id="st" style="margin-top:8px">Не подключено</div></div>
 
-<div class="c"><h2>Цвет</h2>
-<input type="color" id="col" value="#ff0066">
-<div class="sw" id="pre" style="margin-top:10px"></div>
-<div class="row" style="margin-top:10px"><button id="fav">★ Сохранить цвет</button></div>
-<div class="sw" id="favs" style="margin-top:10px"></div></div>
+<div class="c"><h2>Сцены (плавные, без провалов)</h2><div class="g" id="sc"></div>
+<label style="margin-top:12px">Яркость</label><input type="range" id="br" min="1" max="100">
+<label>Скорость</label><input type="range" id="sp" min="0" max="100">
+<label>Не гаснуть ниже, % (дыхание, волна, свеча, музыка)</label><input type="range" id="mn" min="0" max="80"></div>
 
-<div class="c"><h2>Яркость</h2><input type="range" id="br" min="0" max="100" value="100"></div>
+<div class="c"><h2>Цвет</h2><input type="color" id="col"><div class="sw" id="pre"></div>
+<div class="row"><button id="fav">★ Сохранить цвет</button></div><div class="sw" id="favs"></div></div>
 
-<div class="c"><h2>Эффекты</h2><div class="fx" id="fx"></div>
-<label style="display:block;margin-top:10px">Скорость</label><input type="range" id="sp" min="0" max="100" value="50"></div>
+<div class="c"><h2>Палитра для «Волны» и «Градиента»</h2><div class="row pc" id="pal"></div>
+<div class="row"><button id="pa">+ цвет</button><button id="pr">− цвет</button></div></div>
 
-<div class="c"><h2>Музыка (микрофон)</h2>
-<div class="row"><button id="mus">Включить режим музыки</button></div>
-<label style="display:block;margin-top:8px">Чувствительность</label><input type="range" id="sens" min="1" max="10" value="5"></div>
+<div class="c"><h2>Музыка</h2><label>Чувствительность</label><input type="range" id="sens" min="1" max="10" value="5">
+<div id="note">Выберите сцену «Музыка» и разрешите микрофон.</div></div>
 
-<div class="c"><h2>Таймер выключения</h2>
-<div class="row"><button data-t="15">15 мин</button><button data-t="30">30 мин</button><button data-t="60">60 мин</button><button data-t="0">Отмена</button></div>
-<div id="tm" style="font-size:14px;color:var(--mut);margin-top:8px"></div></div>
+<div class="c"><h2>Расписание</h2><div id="rules"></div><div class="row"><button id="ar">+ Добавить правило</button></div>
+<div class="row"><button id="wl">Не гасить экран: выкл</button></div>
+<div id="note" style="margin-top:8px">Расписание работает, пока приложение открыто и подключено к ленте. Включите «Не гасить экран» и оставьте планшет на зарядке. Плавность — это рассвет в начале и затухание в конце.</div></div>
 
+<div class="c"><h2>Таймер сна (плавно гаснет)</h2>
+<div class="row"><button data-t="15">15 мин</button><button data-t="30">30 мин</button><button data-t="60">60 мин</button><button data-t="0">Отмена</button></div></div>
+
+<div class="c"><details><summary style="cursor:pointer">Встроенные эффекты контроллера</summary><div class="g fx" id="fx" style="margin-top:10px"></div></details></div>
 <div class="c"><h2>Лог</h2><div id="log"></div></div>
 
 <script>
-const $=id=>document.getElementById(id);
-let ch=null,dev=null,q=Promise.resolve(),on=true,tmr=null,musOn=false,lastCol=[255,0,102];
-const log=m=>{const l=$('log');l.textContent=m+'\n'+l.textContent.slice(0,600)};
-const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
-function send(b){
-  if(!ch){log('Нет подключения');return}
-  const d=new Uint8Array(b);
-  q=q.then(()=>(ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(d):ch.writeValue(d))).catch(e=>log('Ошибка: '+e.message));
-}
-const color=(r,g,b)=>{lastCol=[r,g,b];send([0x7e,7,5,3,r,g,b,0x10,0xef])};
-const bright=p=>send([0x7e,4,1,p,1,0xff,0xff,0,0xef]);
-const power=v=>{on=v;send(v?[0x7e,4,4,0xf0,0,1,0xff,0,0xef]:[0x7e,4,4,0,0,0,0xff,0,0xef])};
-const effect=id=>send([0x7e,5,3,id,3,0xff,0,0xef]);
-const speed=p=>send([0x7e,4,2,p,0xff,0xff,0,0xef]);
+const $=id=>document.getElementById(id),log=m=>{$('log').textContent=m+'\n'+$('log').textContent.slice(0,500)};
+let S={scene:'breath',col:'#ff6a00',pal:['#ff0044','#ffaa00','#00c8ff'],br:100,sp:40,mn:15,rules:[],favs:[]};
+try{Object.assign(S,JSON.parse(localStorage.getItem('led2')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('led2',JSON.stringify(S))}catch(e){}};
+const SC=[['static','Статика'],['breath','Дыхание'],['rainbow','Радуга'],['wave','Волна'],['grad','Градиент'],['sunset','Закат'],['ocean','Океан'],['aurora','Аврора'],['candle','Свеча'],['music','Музыка']];
+const PAL={sunset:['#ff2a00','#ff7a00','#ffb347','#b0306a','#3d1a78'],ocean:['#0030ff','#00a8ff','#00ffd0','#0066aa'],aurora:['#00ff88','#00bfff','#7a3cff','#00ff88','#1a8f5a']};
+const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),lerp=(a,b,t)=>a.map((x,i)=>x+(b[i]-x)*t);
+const hsv=(h,s,v)=>{const f=n=>{const k=(n+h/60)%6;return v-v*s*Math.max(0,Math.min(k,4-k,1))};return[f(5),f(3),f(1)].map(x=>x*255)};
+const grad=(p,u)=>{const n=p.length,x=u*n,i=Math.floor(x)%n,f=x-Math.floor(x);return lerp(p[i],p[(i+1)%n],f*f*(3-2*f))};
+let ch=null,dev=null,busy=false,on=true,hw=false,last='',schF=1,slF=1,act=-1,sleep=null,an=null,buf=null,mh=0,mp=0,wlOn=false,wl=null;
+const t0=performance.now();
 
-async function connect(){
-  if(!navigator.bluetooth){$('st').textContent='Web Bluetooth не поддерживается. Откройте в Chrome на Android или ПК.';return}
-  try{
-    dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[0xfff0,0xffe5,0xffe0]});
-    dev.addEventListener('gattserverdisconnected',()=>{ch=null;$('st').textContent='Отключено'});
-    const s=await dev.gatt.connect();
-    try{const sv=await s.getPrimaryService(0xfff0);ch=await sv.getCharacteristic(0xfff3)}
-    catch(e){const sv=await s.getPrimaryService(0xffe5);ch=await sv.getCharacteristic(0xffe9)}
-    $('st').textContent='Подключено: '+(dev.name||'устройство');log('OK');
-  }catch(e){$('st').textContent='Не удалось подключиться';log(e.message)}
+const tx=b=>{const d=new Uint8Array(b);return ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(d):ch.writeValue(d)};
+async function frame(r,g,b){if(busy||!ch)return;busy=true;try{await tx([0x7e,7,5,3,r,g,b,0x10,0xef])}catch(e){log(e.message)}busy=false}
+async function cmd(b){if(!ch)return;for(let i=0;i<20&&busy;i++)await new Promise(r=>setTimeout(r,30));busy=true;try{await tx(b)}catch(e){log(e.message)}busy=false}
+const power=v=>{on=v;last='';cmd(v?[0x7e,4,4,0xf0,0,1,0xff,0,0xef]:[0x7e,4,4,0,0,0,0xff,0,0xef])};
+
+function rgbAt(t){
+  const sp=0.2+S.sp/40,fl=S.mn/100,pal=(PAL[S.scene]||S.pal).map(hex);
+  let c=hex(S.col),v=1;
+  switch(S.scene){
+    case'breath':v=fl+(1-fl)*(.5-.5*Math.cos(t*sp*1.1));break;
+    case'rainbow':c=hsv((t*sp*30)%360,1,1);break;
+    case'wave':c=grad(pal,(t*sp*.05)%1);v=fl+(1-fl)*(.5+.5*Math.sin(t*sp*1.5));break;
+    case'grad':case'sunset':case'ocean':case'aurora':c=grad(pal,(t*sp*.04)%1);break;
+    case'candle':{const n=(Math.sin(t*7.1)+Math.sin(t*11.3+1)+Math.sin(t*3.7+2))/3;v=fl+(1-fl)*(.65+.35*n);break}
+    case'music':{if(!an){v=fl;break}an.getByteFrequencyData(buf);let b=0;for(let i=0;i<6;i++)b+=buf[i];b/=1530;const lv=Math.min(1,b*(+$('sens').value/5)*1.4);if(lv-mp>.15)mh=(mh+47)%360;mp=lv;c=hsv(mh,1,1);v=fl+(1-fl)*lv}
+  }
+  const k=v*S.br/100*schF*slF;return c.map(x=>Math.round(x*k));
 }
-$('conn').onclick=connect;
+setInterval(()=>{if(!ch||!on||hw)return;const c=rgbAt((performance.now()-t0)/1000),k=c.join();if(k===last)return;last=k;frame(...c)},90);
+
+async function micStart(){if(an)return;try{const st=await navigator.mediaDevices.getUserMedia({audio:true}),ac=new AudioContext();an=ac.createAnalyser();an.fftSize=256;ac.createMediaStreamSource(st).connect(an);buf=new Uint8Array(an.frequencyBinCount)}catch(e){log('Микрофон: '+e.message)}}
+function setScene(id){S.scene=id;hw=false;last='';save();if(!on)power(true);if(id==='music')micStart();drawSc()}
+function drawSc(){$('sc').innerHTML='';SC.forEach(([id,n])=>{const b=document.createElement('button');b.textContent=n;if(id===S.scene&&!hw)b.className='on';b.onclick=()=>setScene(id);$('sc').appendChild(b)})}
+
+async function setup(){const s=await dev.gatt.connect();try{ch=await(await s.getPrimaryService(0xfff0)).getCharacteristic(0xfff3)}catch(e){ch=await(await s.getPrimaryService(0xffe5)).getCharacteristic(0xffe9)}last='';$('st').textContent='Подключено: '+(dev.name||'устройство')}
+$('conn').onclick=async()=>{
+  if(!navigator.bluetooth){$('st').textContent='Web Bluetooth не поддерживается. Нужен Chrome.';return}
+  try{dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[0xfff0,0xffe5,0xffe0]});
+    dev.addEventListener('gattserverdisconnected',async()=>{ch=null;$('st').textContent='Переподключаю…';for(let i=0;i<4;i++){await new Promise(r=>setTimeout(r,2000));try{await setup();return}catch(e){}}$('st').textContent='Отключено'});
+    await setup()}catch(e){$('st').textContent='Не удалось подключиться';log(e.message)}};
 $('pw').onclick=()=>power(!on);
-$('col').oninput=e=>{const c=hex(e.target.value);throttle(()=>color(...c))};
-let lt=0;function throttle(f){const n=Date.now();if(n-lt>70){lt=n;f()}}
-$('br').oninput=e=>throttle(()=>bright(+e.target.value));
-$('sp').oninput=e=>throttle(()=>speed(+e.target.value));
 
-const presets=['#ff0000','#ff7a00','#ffd000','#00ff40','#00e5ff','#0040ff','#9b30ff','#ff00aa','#ffffff','#ffb46b'];
-function swatch(box,c){const i=document.createElement('i');i.style.background=c;i.onclick=()=>{$('col').value=c;color(...hex(c))};box.appendChild(i)}
-presets.forEach(c=>swatch($('pre'),c));
-function favs(){let a=[];try{a=JSON.parse(localStorage.getItem('f')||'[]')}catch(e){}return a}
-function drawFavs(){$('favs').innerHTML='';favs().forEach(c=>swatch($('favs'),c))}
-$('fav').onclick=()=>{const a=favs();a.push($('col').value);try{localStorage.setItem('f',JSON.stringify(a.slice(-12)))}catch(e){}drawFavs()};
-drawFavs();
-
-for(let i=0;i<29;i++){const b=document.createElement('button');b.textContent=i+1;b.onclick=()=>effect(0x80+i);$('fx').appendChild(b)}
-
-document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{
-  clearTimeout(tmr);const m=+b.dataset.t;
-  if(!m){$('tm').textContent='';return}
-  tmr=setTimeout(()=>{power(false);$('tm').textContent='Выключено по таймеру'},m*60000);
-  $('tm').textContent='Выключится через '+m+' мин (страница должна оставаться открытой)';
-});
-
-$('mus').onclick=async()=>{
-  if(musOn){musOn=false;$('mus').textContent='Включить режим музыки';return}
-  try{
-    const st=await navigator.mediaDevices.getUserMedia({audio:true});
-    const ac=new AudioContext(),an=ac.createAnalyser();an.fftSize=256;
-    ac.createMediaStreamSource(st).connect(an);const buf=new Uint8Array(an.frequencyBinCount);
-    musOn=true;$('mus').textContent='Выключить режим музыки';let h=0,prev=0;
-    const loop=()=>{
-      if(!musOn){st.getTracks().forEach(t=>t.stop());ac.close();return}
-      an.getByteFrequencyData(buf);
-      let bass=0;for(let i=0;i<6;i++)bass+=buf[i];bass/=6*255;
-      const k=+$('sens').value/5;const lv=Math.min(1,bass*k*1.4);
-      if(lv-prev>0.15)h=(h+47)%360;prev=lv;
-      const [r,g,b]=hsv(h,1,Math.max(0.05,lv));
-      throttle(()=>color(r,g,b));
-      requestAnimationFrame(loop);
-    };loop();
-  }catch(e){log('Микрофон: '+e.message)}
-};
-function hsv(h,s,v){const f=n=>{const k=(n+h/60)%6;return v-v*s*Math.max(0,Math.min(k,4-k,1))};return[f(5),f(3),f(1)].map(x=>Math.round(x*255))}
+// цвет
+const sw=(box,c)=>{const i=document.createElement('i');i.style.background=c;i.onclick=()=>{S.col=c;$('col').value=c;last='';save();if(['rainbow','wave','grad','sunset','ocean','aurora'].includes(S.scene)&&!hw)setScene('static')};box.appendChild(i)};
+['#ff0000','#ff7a00','#ffd000','#00ff40','#00e5ff','#0040ff','#9b30ff','#ff00aa','#ffffff','#ffb46b'].forEach(c=>sw($('pre'),c));
+const drawFav=()=>{$('favs').innerHTML='';S.favs.forEach(c=>sw($('favs'),c))};
+$('fav').onclick=()=>{S.favs=S.favs.concat($('col').value).slice(-12);save();drawFav()};
+$('col').oninput=e=>{S.col=e.target.value;last='';save()};
+// палитра
+function drawPal(){$('pal').innerHTML='';S.pal.forEach((c,i)=>{const e=document.createElement('input');e.type='color';e.value=c;e.oninput=()=>{S.pal[i]=e.value;save()};$('pal').appendChild(e)})}
+$('pa').onclick=()=>{if(S.pal.length<6){S.pal.push('#ffffff');save();drawPal()}};
+$('pr').onclick=()=>{if(S.pal.length>2){S.pal.pop();save();drawPal()}};
+// слайдеры
+[['br'],['sp'],['mn']].forEach(([k])=>{$(k).value=S[k];$(k).oninput=e=>{S[k]=+e.target.value;last='';save();if(k==='sp'&&hw)cmd([0x7e,4,2,S.sp,0xff,0xff,0,0xef])}});
+for(let i=0;i<29;i++){const b=document.createElement('button');b.textContent=i+1;b.onclick=()=>{hw=true;if(!on)power(true);cmd([0x7e,5,3,0x80+i,3,0xff,0,0xef]);drawSc()};$('fx').appendChild(b)}
+// таймер сна
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const m=+b.dataset.t;sleep=m?{end:Date.now()+m*60000,len:m*60000}:null;slF=1});
+// экран
+$('wl').onclick=async()=>{try{if(wlOn){wlOn=false;await wl.release();$('wl').textContent='Не гасить экран: выкл'}else{wl=await navigator.wakeLock.request('screen');wlOn=true;$('wl').textContent='Не гасить экран: вкл'}}catch(e){log(e.message)}};
+document.addEventListener('visibilitychange',async()=>{if(wlOn&&document.visibilityState==='visible')try{wl=await navigator.wakeLock.request('screen')}catch(e){}});
+// расписание
+const DN=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],tm=s=>{const[h,m]=s.split(':');return+h*60+ +m};
+function drawRules(){const b=$('rules');b.innerHTML='';S.rules.forEach((r,i)=>{const d=document.createElement('div');d.className='rule';
+d.innerHTML=`<div class="row" style="margin:0"><label>Вкл<input type="time" data-i="${i}" data-k="on" value="${r.on}"></label><label>Выкл<input type="time" data-i="${i}" data-k="off" value="${r.off}"></label></div>
+<div class="row"><select data-i="${i}" data-k="scene">${SC.map(s=>`<option value="${s[0]}"${s[0]===r.scene?' selected':''}>${s[1]}</option>`).join('')}</select><label>Плавность, мин<input type="number" min="0" max="120" data-i="${i}" data-k="fade" value="${r.fade}"></label></div>
+<div class="days">${DN.map((n,j)=>`<button data-i="${i}" data-d="${j}" class="${r.days.includes(j)?'on':''}">${n}</button>`).join('')}</div>
+<div class="row"><button data-del="${i}">Удалить</button></div>`;b.appendChild(d)})}
+$('rules').onchange=e=>{const t=e.target,i=t.dataset.i;if(i==null)return;S.rules[i][t.dataset.k]=t.dataset.k==='fade'?+t.value:t.value;save();act=-1};
+$('rules').onclick=e=>{const t=e.target;if(t.dataset.del!=null){S.rules.splice(+t.dataset.del,1);act=-1}else if(t.dataset.d!=null){const r=S.rules[+t.dataset.i],d=+t.dataset.d;r.days=r.days.includes(d)?r.days.filter(x=>x!==d):r.days.concat(d)}else return;save();drawRules()};
+$('ar').onclick=()=>{S.rules.push({on:'22:00',off:'07:00',scene:'sunset',fade:10,days:[0,1,2,3,4,5,6]});save();drawRules()};
+setInterval(()=>{
+  const n=new Date(),m=n.getHours()*60+n.getMinutes()+n.getSeconds()/60,dw=(n.getDay()+6)%7;let cur=-1,f=1;
+  S.rules.forEach((r,i)=>{const a=tm(r.on),z=tm(r.off),len=((z-a+1440)%1440)||1440,el=(m-a+1440)%1440;
+    if(el<len&&r.days.includes(m>=a?dw:(dw+6)%7)){cur=i;f=r.fade>0?Math.max(.02,Math.min(1,el/r.fade,(len-el)/r.fade)):1}});
+  schF=cur>=0?f:1;
+  if(ch){if(cur>=0&&act!==cur){act=cur;setScene(S.rules[cur].scene)}else if(cur<0&&act>=0){act=-1;power(false)}}
+  if(sleep){const rem=sleep.end-Date.now();if(rem<=0){sleep=null;slF=1;power(false)}else slF=Math.min(1,rem/Math.min(sleep.len,600000))}
+},1000);
+$('col').value=S.col;drawSc();drawFav();drawPal();drawRules();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>
