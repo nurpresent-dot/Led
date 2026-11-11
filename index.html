@@ -48,9 +48,9 @@ label{font-size:13px;color:var(--mut);display:block}
 <div id="note" style="margin-top:8px">Расписание работает, пока приложение открыто и подключено к ленте. Включите «Не гасить экран» и оставьте планшет на зарядке. Плавность — это рассвет в начале и затухание в конце.</div></div>
 
 <div class="c"><h2>Таймер сна (плавно гаснет)</h2>
-<div class="row"><button data-t="15">15 мин</button><button data-t="30">30 мин</button><button data-t="60">60 мин</button><button data-t="0">Отмена</button></div></div>
+<div class="row"><button data-t="15">15 мин</button><button data-t="30">30 мин</button><button data-t="60">60 мин</button><button data-t="0">Отмена</button></div><div id="tl" style="font-size:13px;color:var(--mut);margin-top:8px"></div></div>
 
-<div class="c"><details><summary style="cursor:pointer">Встроенные эффекты контроллера</summary><div class="g fx" id="fx" style="margin-top:10px"></div></details></div>
+<div class="c"><details><summary style="cursor:pointer">Встроенные эффекты контроллера</summary><div class="g fx" id="fx" style="margin-top:10px"></div><div id="fxn" style="font-size:13px;color:var(--mut);margin-top:8px">Эффект не выбран</div></details></div>
 <div class="c"><h2>Лог</h2><div id="log"></div></div>
 
 <script>
@@ -69,7 +69,8 @@ const t0=performance.now();
 const tx=b=>{const d=new Uint8Array(b);return ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(d):ch.writeValue(d)};
 async function frame(r,g,b){if(busy||!ch)return;busy=true;try{await tx([0x7e,7,5,3,r,g,b,0x10,0xef])}catch(e){log(e.message)}busy=false}
 async function cmd(b){if(!ch)return;for(let i=0;i<20&&busy;i++)await new Promise(r=>setTimeout(r,30));busy=true;try{await tx(b)}catch(e){log(e.message)}busy=false}
-const power=v=>{on=v;last='';cmd(v?[0x7e,4,4,0xf0,0,1,0xff,0,0xef]:[0x7e,4,4,0,0,0,0xff,0,0xef])};
+function updPw(){$('pw').className=on?'on':'';$('pw').textContent=on?'● Включено':'○ Выключено'}
+const power=v=>{on=v;last='';updPw();cmd(v?[0x7e,4,4,0xf0,0,1,0xff,0,0xef]:[0x7e,4,4,0,0,0,0xff,0,0xef])};
 
 function rgbAt(t){
   const sp=0.2+S.sp/40,fl=S.mn/100,pal=(PAL[S.scene]||S.pal).map(hex);
@@ -87,7 +88,7 @@ function rgbAt(t){
 setInterval(()=>{if(!ch||!on||hw)return;const c=rgbAt((performance.now()-t0)/1000),k=c.join();if(k===last)return;last=k;frame(...c)},90);
 
 async function micStart(){if(an)return;try{const st=await navigator.mediaDevices.getUserMedia({audio:true}),ac=new AudioContext();an=ac.createAnalyser();an.fftSize=256;ac.createMediaStreamSource(st).connect(an);buf=new Uint8Array(an.frequencyBinCount)}catch(e){log('Микрофон: '+e.message)}}
-function setScene(id){S.scene=id;hw=false;last='';save();if(!on)power(true);if(id==='music')micStart();drawSc()}
+function setScene(id){S.scene=id;hw=false;drawFx();last='';save();if(!on)power(true);if(id==='music')micStart();drawSc()}
 function drawSc(){$('sc').innerHTML='';SC.forEach(([id,n])=>{const b=document.createElement('button');b.textContent=n;if(id===S.scene&&!hw)b.className='on';b.onclick=()=>setScene(id);$('sc').appendChild(b)})}
 
 async function setup(){const s=await dev.gatt.connect();try{ch=await(await s.getPrimaryService(0xfff0)).getCharacteristic(0xfff3)}catch(e){ch=await(await s.getPrimaryService(0xffe5)).getCharacteristic(0xffe9)}last='';$('st').textContent='Подключено: '+(dev.name||'устройство')}
@@ -110,9 +111,14 @@ $('pa').onclick=()=>{if(S.pal.length<6){S.pal.push('#ffffff');save();drawPal()}}
 $('pr').onclick=()=>{if(S.pal.length>2){S.pal.pop();save();drawPal()}};
 // слайдеры
 [['br'],['sp'],['mn']].forEach(([k])=>{$(k).value=S[k];$(k).oninput=e=>{S[k]=+e.target.value;last='';save();if(k==='sp'&&hw)cmd([0x7e,4,2,S.sp,0xff,0xff,0,0xef])}});
-for(let i=0;i<29;i++){const b=document.createElement('button');b.textContent=i+1;b.onclick=()=>{hw=true;if(!on)power(true);cmd([0x7e,5,3,0x80+i,3,0xff,0,0xef]);drawSc()};$('fx').appendChild(b)}
+const FXN=['Прыжок: красный, зелёный, синий','Прыжок: 7 цветов','Плавно: красный','Плавно: зелёный','Плавно: синий','Плавно: жёлтый','Плавно: голубой','Плавно: фиолетовый','Плавно: белый','Плавно: красный↔зелёный','Плавно: красный↔синий','Плавно: зелёный↔синий','Плавно: красный, зелёный, синий','Плавно: 7 цветов','Мигание: красный','Мигание: зелёный','Мигание: синий','Мигание: жёлтый','Мигание: голубой','Мигание: фиолетовый','Мигание: белый','Мигание: 7 цветов'];
+let hwId=-1;
+function drawFx(){$('fx').innerHTML='';for(let i=0;i<29;i++){const b=document.createElement('button');b.textContent=i+1;if(hw&&hwId===i)b.className='on';b.onclick=()=>{hw=true;hwId=i;if(!on)power(true);cmd([0x7e,5,3,0x80+i,3,0xff,0,0xef]);drawFx();drawSc()};$('fx').appendChild(b)}
+$('fxn').textContent=hw&&hwId>=0?(hwId+1)+'. '+(FXN[hwId]||'нестандартный, может не работать'):'Эффект не выбран'}
 // таймер сна
-document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const m=+b.dataset.t;sleep=m?{end:Date.now()+m*60000,len:m*60000}:null;slF=1});
+function updTimer(){document.querySelectorAll('[data-t]').forEach(b=>b.className=sleep&&sleep.len===+b.dataset.t*60000?'on':'');
+if(sleep){const r=Math.max(0,Math.round((sleep.end-Date.now())/1000));$('tl').textContent='Осталось '+Math.floor(r/60)+':'+String(r%60).padStart(2,'0')+', лента плавно погаснет'}else $('tl').textContent=''}
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const m=+b.dataset.t;sleep=m?{end:Date.now()+m*60000,len:m*60000}:null;slF=1;updTimer()});
 // экран
 $('wl').onclick=async()=>{try{if(wlOn){wlOn=false;await wl.release();$('wl').textContent='Не гасить экран: выкл'}else{wl=await navigator.wakeLock.request('screen');wlOn=true;$('wl').textContent='Не гасить экран: вкл'}}catch(e){log(e.message)}};
 document.addEventListener('visibilitychange',async()=>{if(wlOn&&document.visibilityState==='visible')try{wl=await navigator.wakeLock.request('screen')}catch(e){}});
@@ -133,7 +139,8 @@ setInterval(()=>{
   schF=cur>=0?f:1;
   if(ch){if(cur>=0&&act!==cur){act=cur;setScene(S.rules[cur].scene)}else if(cur<0&&act>=0){act=-1;power(false)}}
   if(sleep){const rem=sleep.end-Date.now();if(rem<=0){sleep=null;slF=1;power(false)}else slF=Math.min(1,rem/Math.min(sleep.len,600000))}
+  updTimer();
 },1000);
-$('col').value=S.col;drawSc();drawFav();drawPal();drawRules();
+$('col').value=S.col;updPw();drawFx();drawSc();drawFav();drawPal();drawRules();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>
